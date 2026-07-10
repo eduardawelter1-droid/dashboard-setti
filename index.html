@@ -381,26 +381,36 @@ const DEFAULT_CONFIG = {
     "embarq":"Expedição","expedi":"Expedição"
   },
   // Agrupamento de recursos em grupos de fábrica (palavra-chave no nome do recurso -> grupo)
-  gruposVersion: 3,   // ao aumentar, sobrescreve os mapas de grupo salvos pelo usuário
+  gruposVersion: 4,   // ao aumentar, sobrescreve os mapas de grupo salvos pelo usuário
   // Mapa EXATO recurso->grupo (prioridade máxima; casa pelo nome normalizado da máquina)
   gruposExato: {
-    "banca 1 e 2":"Banca","banca 3":"Banca","ferramentaria":"Banca","desempeno":"Banca",
-    "maxmill 855":"Usinagem","feeler":"Usinagem","1000 sinitron":"Usinagem","1500 sinitron":"Usinagem",
-    "robodrill":"Usinagem de precisão","maxmill 600":"Usinagem de precisão","maxmill 600 noite":"Usinagem de precisão","hartford":"Usinagem de precisão",
+    "robodrill":"Usinagem de precisão","maxmill qmc 600":"Usinagem de precisão","hartford lg1370":"Usinagem de precisão","maxmill 600 noite":"Usinagem de precisão",
+    "maxmill vmc 855":"Usinagem","feeler fv 760":"Usinagem","1000 sinitron":"Usinagem","1500 sinitron":"Usinagem",
+    "torno cnc":"Torno CNC",
     "coquilhadeira 1":"Fundição","coquilhadeira 2":"Fundição","coquilhadeira 3":"Fundição",
-    "eletro 1":"Eletroerosão","eletro 2":"Eletroerosão","eletroerosão":"Eletroerosão","eletroerosao":"Eletroerosão",
-    "qualidade":"Outros","solda alumínio":"Outros","solda aluminio":"Outros","torno cnc":"Outros","desenvolvimento":"Outros","cliente":"Outros","a definir":"Outros"
+    "desempeno":"Desempeno",
+    "banca 1 e 2":"Banca","banca 3":"Banca",
+    "ferramentaria":"Ferramentaria",
+    "eletro 1":"Eletroerosão","eletro 2":"Eletroerosão",
+    "solda alumínio":"Solda","solda aluminio":"Solda",
+    "qualidade":"Qualidade",
+    "a definir":"Apoio","apoio":"Apoio",
+    "desenvolvimento":"Administrativo","fornecedor":"Administrativo","cliente":"Administrativo"
   },
-  // Fallback por palavra-chave (quando não houver correspondência exata)
+  // Fallback por palavra-chave (quando não houver correspondência exata — casa por trecho do nome)
   gruposRecurso: {
     "coquilha":"Fundição","fundi":"Fundição",
-    "sinitron":"Usinagem","feeler":"Usinagem","maxmill 855":"Usinagem",
-    "robodrill":"Usinagem de precisão","maxmill":"Usinagem de precisão","hartford":"Usinagem de precisão",
-    "banca":"Banca","ferramentaria":"Banca","desempeno":"Banca","paralel":"Banca",
+    "sinitron":"Usinagem","feeler":"Usinagem","vmc 855":"Usinagem","vmc":"Usinagem","maxmill 855":"Usinagem",
+    "robodrill":"Usinagem de precisão","qmc":"Usinagem de precisão","hartford":"Usinagem de precisão","maxmill 600":"Usinagem de precisão",
+    "torno":"Torno CNC",
+    "desempen":"Desempeno",
+    "banca":"Banca","paralel":"Banca",
+    "ferramentaria":"Ferramentaria",
     "eletro":"Eletroerosão","grava":"Eletroerosão",
-    "torno":"Outros","solda":"Outros","qualidade":"Outros","confer":"Outros","inspe":"Outros","cliente":"Outros","desenvolvimento":"Outros",
-    "expedi":"Expedição","embarq":"Expedição",
-    "projeto":"Projeto","amostra":"Projeto"
+    "solda":"Solda",
+    "qualidade":"Qualidade","confer":"Qualidade","inspe":"Qualidade",
+    "definir":"Apoio","apoio":"Apoio",
+    "desenvolvimento":"Administrativo","fornecedor":"Administrativo","cliente":"Administrativo"
   },
   // Capacidade padrão (peças/dia) por recurso
   capacidade: {
@@ -2027,9 +2037,9 @@ let REPORT_CFG=(()=>{ try{ return Object.assign({grupo:'geral',incluir:false}, J
 function saveReportCfg(){ try{ localStorage.setItem('setti_report_cfg', JSON.stringify(REPORT_CFG)); }catch(e){} }
 const REPORT_GROUPS={
   fundicao:{label:'Fundição', setores:['Fundição']},
-  usinagem:{label:'Usinagem', setores:['Usinagem','Usinagem de precisão','Torno','Torno CNC','Desempeno']},
+  usinagem:{label:'Usinagem / Torno / Desempeno', setores:['Usinagem','Usinagem de precisão','Torno','Torno CNC','Desempeno']},
   banca:{label:'Banca / Ferramentaria / Solda / Eletroerosão', setores:['Banca','Ferramentaria','Solda','Eletroerosão','Eletroerosao']},
-  qualidade:{label:'Qualidade', setores:['Qualidade','Apoio','Desenvolvimento','Cliente','Projeto']},
+  qualidade:{label:'Qualidade / Apoio / Administrativo', setores:['Qualidade','Apoio','Administrativo','Desenvolvimento','Cliente','Projeto']},
   demais:{label:'Demais recursos / Não mapeados', setores:[]}
 };
 const REPORT_ORDER=['fundicao','usinagem','banca','qualidade','demais'];
@@ -3107,7 +3117,9 @@ function cloudReady(){ return CLOUD_ON && SB; }
 function collectState(){ return { config:CONFIG, tasks:TASKS, promises:PROMISES, log:LOG, notes:NOTES,
   changed:CHANGED, filemeta:FILEMETA, isdemo:IS_DEMO, lastupdate:LAST_UPDATE, baseline:BASELINE_BY_UID, v:1 }; }
 function applyState(s){ if(!s) return;
-  if(s.config){ CONFIG=Object.assign({},DEFAULT_CONFIG,s.config); ['gruposExato','gruposRecurso','recursoPorOperacao','capacidade','fatores','cores','risco','diasUteis'].forEach(k=>{ CONFIG[k]=Object.assign({},DEFAULT_CONFIG[k],s.config[k]||{}); }); }
+  if(s.config){ CONFIG=Object.assign({},DEFAULT_CONFIG,s.config); ['gruposExato','gruposRecurso','recursoPorOperacao','capacidade','fatores','cores','risco','diasUteis'].forEach(k=>{ CONFIG[k]=Object.assign({},DEFAULT_CONFIG[k],s.config[k]||{}); });
+    // versão dos grupos: se a base da nuvem tem mapa antigo, aplica o mapa novo (mesma regra do load local)
+    if((s.config.gruposVersion||0) < DEFAULT_CONFIG.gruposVersion){ CONFIG.gruposExato=Object.assign({},DEFAULT_CONFIG.gruposExato); CONFIG.gruposRecurso=Object.assign({},DEFAULT_CONFIG.gruposRecurso); CONFIG.gruposVersion=DEFAULT_CONFIG.gruposVersion; } }
   TASKS=s.tasks||null; PROMISES=s.promises||null; LOG=s.log||[]; NOTES=s.notes||[];
   CHANGED=s.changed||{}; FILEMETA=s.filemeta||null; IS_DEMO=!!s.isdemo; LAST_UPDATE=s.lastupdate||null;
   if(s.baseline) BASELINE_BY_UID=s.baseline;
